@@ -107,7 +107,7 @@ Example of result
 /todos DELETE action
 ```
 
-### Generate thousands of fake to-do items
+### Generate thousands of fake TODO items
 
 
 ApacheBench was used for this purpose. Command for generating thousands of fake to-do items is below :

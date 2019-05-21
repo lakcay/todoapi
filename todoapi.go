@@ -193,14 +193,13 @@ func periodicDueDateChecker(tick time.Time){
 
 // Main function
 func main() {
-	
-    ticker := time.NewTicker(DUE_DATE_CHECK_PERIOD * time.Second)
-    go func(){
-        for t := range ticker.C {
-            //Call the periodic function here.
-            periodicDueDateChecker(t)
-        }
-    }()
+    	ticker := time.NewTicker(DUE_DATE_CHECK_PERIOD * time.Second)
+   	go func(){
+       	 	for t := range ticker.C {
+            		//Call the periodic function here.
+            		periodicDueDateChecker(t)
+        	}
+    	}()
 	// Init router
 	r := mux.NewRouter()
 

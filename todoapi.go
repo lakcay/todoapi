@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 	"math/rand"
+	"sync"
 	"github.com/gorilla/mux"
 )
 
@@ -21,6 +22,8 @@ type ToDo struct {
 	NotificationSent bool `json:"notificationsent"`
 }
 
+//mutex is going to be used for sync access
+var mutex = &sync.Mutex{}
 // Init todos var as a slice ToDo struct
 var todos []ToDo
 

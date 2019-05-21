@@ -19,12 +19,12 @@ type ToDo struct {
 	Tags     [ ]string `json:"tags"`
 	DueDate   time.Time `json:"date"`
 	Completed bool `json:"completed"`
-	NotificationSent bool `json:"notificationsent"`
+	NotificationSent bool `json:"-"`
 }
 
-//mutex is going to be used for sync access
-var mutex = &sync.Mutex{}
-// Init todos var as a slice ToDo struct
+//read write mutex is going to be used for sync access todos 
+var mutex sync.RWMutex
+// Init todos var as a slice ToDo struct. no database implementation for now 
 var todos []ToDo
 
 const DUE_DATE_CHECK_PERIOD = 10
@@ -32,56 +32,61 @@ const DUE_DATE_CHECK_PERIOD = 10
 // Get all todos
 func getToDos(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	mutex.RLock()
 	json.NewEncoder(w).Encode(todos)
+	mutex.RUnlock()
 }
 
 // Get single todo
 func getToDo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r) // Gets params
+	params := mux.Vars(r) 
+	mutex.RLock()
 	// Loop through todos and find one with the id from the params
 	for _, item := range todos {
 		if item.ID == params["id"] {
 			json.NewEncoder(w).Encode(item)
+			mutex.RUnlock()
 			return
 		}
 	}
-	json.NewEncoder(w).Encode(&ToDo{})
+	mutex.RUnlock()	
 }
 
 // Get single todo by title
 func getToDoByTitle(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r) // Gets params
+	params := mux.Vars(r) 
+	mutex.RLock()
 	// Loop through todos and find one with the title from the params
 	for _, item := range todos {
 		if item.Title == params["title"] {
 			json.NewEncoder(w).Encode(item)
-			//return
 		}
 	}
-	json.NewEncoder(w)
+	mutex.RUnlock()	
 }
 
 
 // Get single todo by description
 func getToDoByDescription(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r) // Gets params
+	params := mux.Vars(r) 
+	mutex.RLock()
 	// Loop through todos and find one with the description from the params
 	for _, item := range todos {
 		if item.Description == params["description"] {
 			json.NewEncoder(w).Encode(item)
-			//return
 		}
 	}
-	json.NewEncoder(w)
+	mutex.RUnlock()		
 }
 
 // Get  todo by tag
 func getToDoByTag(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r) // Gets params
+	params := mux.Vars(r) 
+	mutex.RLock()
 	// Loop through todos and find one with the tag from the params
 	for _, item := range todos {
 		for _, tag := range item.Tags {
@@ -91,20 +96,21 @@ func getToDoByTag(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	json.NewEncoder(w)
+	mutex.RUnlock()	
 }
 
 // Get single todo by due date
 func getToDoByDueDate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r) // Gets params
+	params := mux.Vars(r) 
+	mutex.RLock()
 	// Loop through todos and find one with the date from the params
 	for _, item := range todos {
 		if item.DueDate.Format(time.RFC3339Nano) == params["date"] {
 			json.NewEncoder(w).Encode(item)
 		}
 	}
-	json.NewEncoder(w)
+	mutex.RUnlock()	
 }
 
 //Generating Id
@@ -127,8 +133,10 @@ func createToDo(w http.ResponseWriter, r *http.Request) {
 	todo.ID = generateUUID()
 	todo.Completed = false
 	todo.NotificationSent = false
+	mutex.Lock()
 	todos = append(todos, todo)
-	json.NewEncoder(w).Encode(todo)
+	mutex.Unlock()		
+	json.NewEncoder(w).Encode(todo)	
 }
 
 // Update todo
@@ -137,11 +145,16 @@ func updateToDo(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	for index, item := range todos {
 		if item.ID == params["id"] {
-			todos = append(todos[:index], todos[index+1:]...)
 			var todo ToDo
 			_ = json.NewDecoder(r.Body).Decode(&todo)
-			todo.ID = params["id"]
-			todos = append(todos, todo)
+			todo.ID = item.ID
+			mutex.Lock()
+			todos[index].Title = todo.Title
+			todos[index].Description = todo.Description
+			todos[index].Tags = todo.Tags
+			todos[index].Completed = todo.Completed
+			todos[index].DueDate = todo.DueDate
+			mutex.Unlock()			
 			json.NewEncoder(w).Encode(todo)
 			return
 		}
@@ -154,15 +167,19 @@ func deleteToDo(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	for index, item := range todos {
 		if item.ID == params["id"] {
+			mutex.Lock()
 			todos = append(todos[:index], todos[index+1:]...)
+			mutex.Unlock()			
 			break
 		}
 	}
-	json.NewEncoder(w).Encode(todos)
+
 }
 
 func deleteAllToDos(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
 	todos = nil 
+	mutex.Unlock()				
 }
 
 //this function is going to prepare a callback function according to client information (ios/android url etc)
@@ -193,13 +210,14 @@ func periodicDueDateChecker(tick time.Time){
 
 // Main function
 func main() {
+	
     	ticker := time.NewTicker(DUE_DATE_CHECK_PERIOD * time.Second)
-   	go func(){
-       	 	for t := range ticker.C {
-            		//Call the periodic function here.
-            		periodicDueDateChecker(t)
-        	}
-    	}()
+    	go func(){
+        	for t := range ticker.C {
+           	 	//Call the periodic function here.
+           	 	periodicDueDateChecker(t)
+      	  	}
+   	}()
 	// Init router
 	r := mux.NewRouter()
 

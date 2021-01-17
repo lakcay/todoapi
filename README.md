@@ -5,7 +5,7 @@ RESTful API (using JSON) to create, read, update and delete TODO items.
 ## Getting Started
 I used the GO programming language in this project, although I haven't used it before. Because, in terms of API development, GO offers many advantages over other programming languages. For example, concurrency model in Golang ensures faster performance than other programming languages.
 
-First of all i planned to implement todo api with Java without a full framework, searched some micro frameworks like Spark and Rapidoid. In Java i was planning to use thread pool to serve concurrent requests with producer consumer approach. But finally i decided to use GO language because it s easy to learn, simple, static typing, easy concurrency model(lightweight fast go routines), nice standard library for web api (json, web server etc.) 
+First of all I planned to implement todo api with Java without a full framework, searched some micro frameworks like Spark and Rapidoid. In Java i was planning to use thread pool to serve concurrent requests with producer consumer approach. But finally i decided to use GO language because it s easy to learn, simple, static typing, easy concurrency model(lightweight fast go routines), nice standard library for web api (json, web server etc.) 
 
 ### Prerequisites
 
